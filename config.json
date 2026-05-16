@@ -3,7 +3,7 @@
     "name": "uart",
     "description": "PHP-Controllable UART Extension",
     "author": "Project Saturn Studios, LLC",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "extra-sources": [
         "api/uart-config.c",
         "api/uart-use.c"
