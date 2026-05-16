@@ -1,0 +1,30 @@
+{
+    "name": "php-io-extensions/uart",
+    "type": "php-ext",
+    "description": "PHP-Controllable UART Extension",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Project Saturn Studios, LLC",
+            "email": "info@projectsaturnstudios.com"
+        }
+    ],
+    "require": {
+        "php": ">=8.3"
+    },
+    "php-ext": {
+        "extension-name": "uart",
+        "priority": 30,
+        "build-path": "ext",
+        "support-zts": true,
+        "support-nts": true,
+        "os-families-exclude": ["windows"],
+        "configure-options": [
+            {
+                "name": "enable-uart",
+                "description": "Enable the UART extension",
+                "needs-value": false
+            }
+        ]
+    }
+}
