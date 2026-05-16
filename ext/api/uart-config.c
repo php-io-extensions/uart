@@ -23,6 +23,42 @@
 #  endif
 #endif
 
+/*
+ * Linux BOTHER / termios2 support for non-standard baud rates.
+ *
+ * We define the handful of symbols we need inline rather than including
+ * <asm/termios.h>, which redefines struct termios and causes a hard
+ * compilation error when <termios.h> is already included.
+ *
+ * struct termios2 layout and the TCGETS2/TCSETS2 ioctl numbers are stable
+ * across all Linux architectures with 32-bit tcflag_t (x86, x86_64, ARM,
+ * ARM64, RISC-V, etc.).  BOTHER and CBAUD are identical on all of them.
+ */
+#ifdef __linux__
+struct termios2 {
+    unsigned int  c_iflag;
+    unsigned int  c_oflag;
+    unsigned int  c_cflag;
+    unsigned int  c_lflag;
+    unsigned char c_line;
+    unsigned char c_cc[19];
+    unsigned int  c_ispeed;
+    unsigned int  c_ospeed;
+};
+#ifndef BOTHER
+#  define BOTHER   0x00001000
+#endif
+#ifndef CBAUD
+#  define CBAUD    0x0000100F
+#endif
+#ifndef TCGETS2
+#  define TCGETS2  0x802C542A
+#endif
+#ifndef TCSETS2
+#  define TCSETS2  0x402C542B
+#endif
+#endif /* __linux__ */
+
 zend_long uart_set_raw(zval *fd)
 {
     struct termios tty;
@@ -104,7 +140,25 @@ zend_long uart_set_baud_rate(zval *fd, zval *baud)
 #ifdef B4000000
         case 4000000: speed = B4000000; break;
 #endif
-        default: return -1;
+        default:
+#ifdef __linux__
+            /*
+             * Rate has no standard Bxxxxx constant — try the Linux
+             * BOTHER / termios2 path which accepts any numeric rate
+             * the hardware supports.
+             */
+            {
+                struct termios2 tio2;
+                if (ioctl(_fd, TCGETS2, &tio2) == 0) {
+                    tio2.c_cflag &= ~CBAUD;
+                    tio2.c_cflag |=  BOTHER;
+                    tio2.c_ispeed = (speed_t) Z_LVAL_P(baud);
+                    tio2.c_ospeed = (speed_t) Z_LVAL_P(baud);
+                    return (zend_long) ioctl(_fd, TCSETS2, &tio2);
+                }
+            }
+#endif
+            return -1;
     }
 
     cfsetispeed(&tty, speed);
